@@ -5,10 +5,10 @@ import os
 from i18n import lang, set_language
 from PySide6.QtWidgets import (
     QMainWindow, QApplication, QTabWidget, QWidget, QStatusBar, QVBoxLayout, QTextEdit, QInputDialog,
-    QMessageBox, QFileDialog, QDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox
+    QMessageBox, QFileDialog
 )
-from PySide6.QtGui import QAction, QKeySequence, QTextCursor, QTextDocument
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtGui import QAction, QKeySequence, QTextCursor, QTextDocument, QIcon
+from PySide6.QtCore import QTimer
 
 from dialogs import FindReplaceDialog, FindDialog
 
@@ -23,6 +23,7 @@ class BitPad(QMainWindow):
         # ----- Window
         self.setWindowTitle(lang("window.title"))
         self.setGeometry(300, 300, 900, 600)
+        self.setWindowIcon(QIcon("icon.png"))
 
         # ----- Menu Bar
         self.menu_bar = self.menuBar()
