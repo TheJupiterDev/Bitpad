@@ -2,6 +2,7 @@
 
 import json
 import os
+import sys
 from i18n import lang, set_language
 from PySide6.QtWidgets import (
     QMainWindow, QApplication, QTabWidget, QWidget, QStatusBar, QVBoxLayout, QTextEdit, QInputDialog,
@@ -17,6 +18,14 @@ set_language("en")
 PERSISTENCE_FILE = os.path.expanduser("~/.bitpad_autosave.json")
 BOOKMARKS_FILE = os.path.expanduser("~/.bitpad_bookmarks.json")
 
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 class BitPad(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -24,7 +33,7 @@ class BitPad(QMainWindow):
         # ----- Window
         self.setWindowTitle(lang("window.title"))
         self.setGeometry(300, 300, 900, 600)
-        self.setWindowIcon(QIcon("icon.png"))
+        self.setWindowIcon(QIcon(resource_path("assets/icon.png")))
 
         # ----- Menu Bar
         self.menu_bar = self.menuBar()

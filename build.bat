@@ -1,0 +1,1 @@
+pyinstaller --onefile --windowed --add-data "lang;lang" --add-data "assets;assets" --icon=assets/icon.png --name=Bitpad --optimize=2 --strip main.py
