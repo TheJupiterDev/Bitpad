@@ -392,13 +392,15 @@ class BitPad(QMainWindow):
         editor = self.tabs.widget(current_index)
         content = editor.toPlainText()
         title = self.tabs.tabText(current_index)
+        file_path = self.tab_file_paths.get(current_index)
 
         name, ok = QInputDialog.getText(self, "Add Bookmark", "Bookmark name:", text=title)
         if ok and name.strip():
             self.bookmarks.append({
                 "name": name.strip(),
                 "title": title,
-                "content": content
+                "content": content,
+                "file_path": file_path
             })
             self.save_bookmarks()
             self.update_bookmarks_bar()
@@ -440,8 +442,24 @@ class BitPad(QMainWindow):
             self.update_bookmarks_bar()
 
     def open_bookmarked_file(self, bookmark):
+        file_path = bookmark.get("file_path")
+        
+        if file_path and os.path.exists(file_path):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                filename = os.path.basename(file_path)
+                tab_index = self.add_new_tab(filename, content)
+                self.tab_file_paths[tab_index] = file_path
+                
+                return
+            except Exception:
+                # File couldn't be read, fall back to stored content
+                pass
+        
+        # Fallback: use stored content
         index = self.add_new_tab(bookmark["title"], bookmark["content"])
-        self.status.showMessage(f"Opened bookmark: {bookmark['name']}")
 
 if __name__ == '__main__':
     app = QApplication([])

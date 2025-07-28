@@ -57,6 +57,9 @@ This app complies with the MIT License.
 - Added Bookmarks
 - Added a New tab button
 
+### Version 2.1
+- Fixed an issue related to bookmarked files
+
 ---
 
 **Bitpad** - Simple. Fast. Reliable.
