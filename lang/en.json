@@ -16,6 +16,12 @@
     "menubar.edit.redo": "Redo", 
     "menubar.edit.find": "Find",
     "menubar.edit.replace": "Replace",
+    "menubar.bookmarks.title": "Bookmarks",
+    "menubar.bookmarks.add": "Add Bookmark",
+
+    "_comment7": "BOOKMARKS",
+    "bookmarks.title": "Bookmarks",
+    "bookmarks.bookmark_tab": "Bookmark This Tab",
 
     "_comment3": "STATUS TEXTS",
     "status.ready": "Ready",
@@ -42,7 +48,7 @@
     "dialog.replace.replace_all": "Replace All",
 
     "dialog.about.title": "About Bitpad",
-    "dialog.about.text": "<h2>Bitpad Version 1.0</h2>\n<p>A developer-focused text editor built with PySide6.</p>\n<p>Created by the JupiterDev.</p>",
+    "dialog.about.text": "<h2>Bitpad Version 2.0</h2>\n<p>A developer-focused text editor built with PySide6.</p>\n<p>Created by the JupiterDev.</p>",
 
     "_comment6": "ERRORS",
     "error.save.title": "Save Error",
@@ -51,5 +57,6 @@
     "error.open.message": "Could not open file: {error}",
 
     "_comment5": "VARIOUS",
-    "tabs.default_title": "Untitled"
+    "tabs.default_title": "Untitled",
+    "tabs.newtab.tooltip": "Create New Tab"
 }

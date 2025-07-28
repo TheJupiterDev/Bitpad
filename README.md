@@ -2,8 +2,6 @@
 
 A developer-focused text editor for notes, ideas, and inspiration built with PySide6.
 
-## Features
-
 ## Installation
 
 1. Clone or download this repository
@@ -54,6 +52,10 @@ This app complies with the MIT License.
 - Keyboard shortcuts
 - Session persistence
 - Internationalization support
+
+### Version 2.0
+- Added Bookmarks
+- Added a New tab button
 
 ---
 

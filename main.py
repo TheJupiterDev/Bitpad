@@ -5,16 +5,17 @@ import os
 from i18n import lang, set_language
 from PySide6.QtWidgets import (
     QMainWindow, QApplication, QTabWidget, QWidget, QStatusBar, QVBoxLayout, QTextEdit, QInputDialog,
-    QMessageBox, QFileDialog
+    QMessageBox, QFileDialog, QToolBar, QPushButton
 )
-from PySide6.QtGui import QAction, QKeySequence, QTextCursor, QTextDocument, QIcon
-from PySide6.QtCore import QTimer
+from PySide6.QtGui import (QAction, QKeySequence, QTextCursor, QTextDocument, QIcon)
+from PySide6.QtCore import QTimer, Qt, QPoint
 
 from dialogs import FindReplaceDialog, FindDialog
 
 set_language("en")
 
 PERSISTENCE_FILE = os.path.expanduser("~/.bitpad_autosave.json")
+BOOKMARKS_FILE = os.path.expanduser("~/.bitpad_bookmarks.json")
 
 class BitPad(QMainWindow):
     def __init__(self):
@@ -29,6 +30,7 @@ class BitPad(QMainWindow):
         self.menu_bar = self.menuBar()
         self.file_menu = self.menu_bar.addMenu(lang("menubar.file.title"))
         self.edit_menu = self.menu_bar.addMenu(lang("menubar.edit.title"))
+        self.bookmarks_menu = self.menu_bar.addMenu(lang("menubar.bookmarks.title"))
         self.help_menu = self.menu_bar.addMenu(lang("menubar.help.title"))
 
         self.new_tab_action = QAction(lang("menubar.file.newtab"), self)
@@ -41,6 +43,7 @@ class BitPad(QMainWindow):
         self.redo_action = QAction(lang("menubar.edit.redo"), self)
         self.find_action = QAction(lang("menubar.edit.find"), self)
         self.replace_action = QAction(lang("menubar.edit.replace"), self)
+        self.add_bookmark_action = QAction(lang("menubar.bookmarks.add"))
 
         self.file_menu.addAction(self.new_tab_action)
         self.file_menu.addSeparator()
@@ -58,6 +61,31 @@ class BitPad(QMainWindow):
         self.edit_menu.addAction(self.find_action)
         self.edit_menu.addAction(self.replace_action)
 
+        self.bookmarks_menu.addAction(self.add_bookmark_action)
+
+        # ----- Bookmark Bar
+        self.bookmarks_bar = QToolBar(lang("bookmarks.title"))
+        self.bookmarks_bar.setMovable(False)
+
+        list_add_icon = QIcon.fromTheme("list-add")
+        self.new_tab_button = QPushButton()
+        self.new_tab_button.setIcon(list_add_icon)
+        self.new_tab_button.setFixedSize(30, 30)
+        self.new_tab_button.setToolTip(lang("tabs.newtab.tooltip"))
+        self.bookmarks_bar.addWidget(self.new_tab_button)
+
+        self.bookmarks_bar.addSeparator()
+        
+        bookmark_icon = QIcon("assets/bookmark.png")
+        self.add_bookmark_button = QAction(bookmark_icon, lang("bookmarks.bookmark_tab"), self)
+        self.add_bookmark_button.setToolTip(lang("bookmarks.bookmark_tab"))
+        self.add_bookmark_button.triggered.connect(self.add_bookmark)
+        self.bookmarks_bar.addAction(self.add_bookmark_button)
+
+        self.addToolBar(self.bookmarks_bar)
+
+        self.bookmark_buttons = []
+
         # ----- Shortcuts
         self.new_tab_action.setShortcut(QKeySequence.StandardKey.New)     # Ctrl+N
         self.open_action.setShortcut(QKeySequence.StandardKey.Open)       # Ctrl+O
@@ -73,7 +101,6 @@ class BitPad(QMainWindow):
         self.tabs = QTabWidget()
         self.tabs.setTabsClosable(True)
         self.tabs.tabCloseRequested.connect(self.close_tab)
-
         self.tabs.tabBarDoubleClicked.connect(self.rename_tab)
 
         self.add_new_tab(lang("tabs.default_title"))
@@ -90,6 +117,10 @@ class BitPad(QMainWindow):
         self.setStatusBar(self.status)
         self.status.showMessage(lang("status.ready"))
 
+        # ----- Bookmarks
+        self.bookmarks = self.load_bookmarks()
+        self.update_bookmarks_bar()
+
         # ----- Persistence
         self.setup_persistence()
 
@@ -104,12 +135,22 @@ class BitPad(QMainWindow):
         self.redo_action.triggered.connect(self.redo_current_tab)
         self.find_action.triggered.connect(self.show_find_dialog)
         self.replace_action.triggered.connect(self.show_replace_dialog)
+        self.add_bookmark_action.triggered.connect(self.add_bookmark)
+        self.new_tab_button.clicked.connect(lambda: self.add_new_tab(lang("tabs.default_title")))
 
-    def add_new_tab(self, title, content=""):
+    def add_new_tab(self, title, content="", insert_index=None):
         editor = QTextEdit()
         editor.setPlainText(content)
-        index = self.tabs.addTab(editor, title)
+
+        if insert_index is None:
+            index = self.tabs.count()
+            self.tabs.insertTab(index, editor, title)
+        else:
+            index = insert_index
+            self.tabs.insertTab(insert_index, editor, title)
+
         self.tabs.setCurrentIndex(index)
+        return index
 
     def close_tab(self, index):
         if self.tabs.count() > 1:
@@ -236,7 +277,6 @@ class BitPad(QMainWindow):
             QMessageBox.warning(self, lang("error.save.title"), lang("error.save.message").format(error=str(e)))
 
     def open_file(self):
-        """Open a text file in a new tab"""
         file_path, _ = QFileDialog.getOpenFileName(
             self, 
             lang("dialog.open.title"), 
@@ -318,6 +358,81 @@ class BitPad(QMainWindow):
                 break
         
         return count
+
+    def save_bookmarks(self):
+        try:
+            with open(BOOKMARKS_FILE, "w", encoding="utf-8") as f:
+                json.dump(self.bookmarks, f)
+        except Exception:
+            pass
+
+    def load_bookmarks(self):
+        if not os.path.exists(BOOKMARKS_FILE):
+            return []
+        try:
+            with open(BOOKMARKS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+
+    def add_bookmark(self):
+        current_index = self.tabs.currentIndex()
+        if current_index == -1:
+            return
+
+        editor = self.tabs.widget(current_index)
+        content = editor.toPlainText()
+        title = self.tabs.tabText(current_index)
+
+        name, ok = QInputDialog.getText(self, "Add Bookmark", "Bookmark name:", text=title)
+        if ok and name.strip():
+            self.bookmarks.append({
+                "name": name.strip(),
+                "title": title,
+                "content": content
+            })
+            self.save_bookmarks()
+            self.update_bookmarks_bar()
+
+    def update_bookmarks_bar(self):
+        for action in self.bookmark_buttons:
+            self.bookmarks_bar.removeAction(action)
+        self.bookmark_buttons = []
+
+        for i, bookmark in enumerate(self.bookmarks):
+            action = QAction(bookmark["name"], self)
+
+            def handle_triggered(_, b=bookmark):
+                self.open_bookmarked_file(b)
+
+            def handle_right_click(_, index=i):
+                self.remove_bookmark_dialog(index)
+
+            action.triggered.connect(handle_triggered)
+            self.bookmarks_bar.addAction(action)
+            self.bookmark_buttons.append(action)
+
+            widget = self.bookmarks_bar.widgetForAction(action)
+            if widget:
+                widget.setContextMenuPolicy(Qt.CustomContextMenu)
+                widget.customContextMenuRequested.connect(lambda _, i=i: self.remove_bookmark_dialog(i))
+    
+    def remove_bookmark_dialog(self, index):
+        bookmark = self.bookmarks[index]
+        reply = QMessageBox.question(
+            self,
+            "Remove Bookmark",
+            f"Remove bookmark '{bookmark['name']}'?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            del self.bookmarks[index]
+            self.save_bookmarks()
+            self.update_bookmarks_bar()
+
+    def open_bookmarked_file(self, bookmark):
+        index = self.add_new_tab(bookmark["title"], bookmark["content"])
+        self.status.showMessage(f"Opened bookmark: {bookmark['name']}")
 
 if __name__ == '__main__':
     app = QApplication([])
