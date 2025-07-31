@@ -85,7 +85,7 @@ class BitPad(QMainWindow):
 
         self.bookmarks_bar.addSeparator()
         
-        bookmark_icon = QIcon("assets/bookmark.png")
+        bookmark_icon = QIcon(resource_path("assets/bookmark.png"))
         self.add_bookmark_button = QAction(bookmark_icon, lang("bookmarks.bookmark_tab"), self)
         self.add_bookmark_button.setToolTip(lang("bookmarks.bookmark_tab"))
         self.add_bookmark_button.triggered.connect(self.add_bookmark)
