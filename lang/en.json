@@ -18,6 +18,8 @@
     "menubar.edit.replace": "Replace",
     "menubar.bookmarks.title": "Bookmarks",
     "menubar.bookmarks.add": "Add Bookmark",
+    "menubar.view.title": "View",
+    "menubar.view.toggle_preview": "Toggle Markdown Preview",
 
     "_comment7": "BOOKMARKS",
     "bookmarks.title": "Bookmarks",

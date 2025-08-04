@@ -4,9 +4,10 @@ import json
 import os
 import sys
 from i18n import lang, set_language
+from markdown import markdown
 from PySide6.QtWidgets import (
     QMainWindow, QApplication, QTabWidget, QWidget, QStatusBar, QVBoxLayout, QTextEdit, QInputDialog,
-    QMessageBox, QFileDialog, QToolBar, QPushButton
+    QMessageBox, QFileDialog, QToolBar, QPushButton, QSplitter, QTextBrowser
 )
 from PySide6.QtGui import (QAction, QKeySequence, QTextCursor, QTextDocument, QIcon)
 from PySide6.QtCore import QTimer, Qt, QPoint
@@ -40,6 +41,7 @@ class BitPad(QMainWindow):
         self.file_menu = self.menu_bar.addMenu(lang("menubar.file.title"))
         self.edit_menu = self.menu_bar.addMenu(lang("menubar.edit.title"))
         self.bookmarks_menu = self.menu_bar.addMenu(lang("menubar.bookmarks.title"))
+        self.view_menu = self.menu_bar.addMenu(lang("menubar.view.title"))
         self.help_menu = self.menu_bar.addMenu(lang("menubar.help.title"))
 
         self.new_tab_action = QAction(lang("menubar.file.newtab"), self)
@@ -53,6 +55,7 @@ class BitPad(QMainWindow):
         self.find_action = QAction(lang("menubar.edit.find"), self)
         self.replace_action = QAction(lang("menubar.edit.replace"), self)
         self.add_bookmark_action = QAction(lang("menubar.bookmarks.add"))
+        self.toggle_md_preview_action = QAction(lang("menubar.view.toggle_preview"))
 
         self.file_menu.addAction(self.new_tab_action)
         self.file_menu.addSeparator()
@@ -71,6 +74,8 @@ class BitPad(QMainWindow):
         self.edit_menu.addAction(self.replace_action)
 
         self.bookmarks_menu.addAction(self.add_bookmark_action)
+        
+        self.view_menu.addAction(self.toggle_md_preview_action)
 
         # ----- Bookmark Bar
         self.bookmarks_bar = QToolBar(lang("bookmarks.title"))
@@ -146,19 +151,30 @@ class BitPad(QMainWindow):
         self.replace_action.triggered.connect(self.show_replace_dialog)
         self.add_bookmark_action.triggered.connect(self.add_bookmark)
         self.new_tab_button.clicked.connect(lambda: self.add_new_tab(lang("tabs.default_title")))
+        self.toggle_md_preview_action.triggered.connect(self.toggle_markdown_preview)
 
     def add_new_tab(self, title, content="", insert_index=None):
         editor = QTextEdit()
         editor.setPlainText(content)
 
-        if insert_index is None:
-            index = self.tabs.count()
-            self.tabs.insertTab(index, editor, title)
-        else:
-            index = insert_index
-            self.tabs.insertTab(insert_index, editor, title)
+        preview = QTextBrowser()
+        preview.setVisible(False)
 
+        splitter = QSplitter()
+        splitter.addWidget(editor)
+        splitter.addWidget(preview)
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 2)
+
+        index = insert_index if insert_index is not None else self.tabs.count()
+        self.tabs.insertTab(index, splitter, title)
         self.tabs.setCurrentIndex(index)
+
+        splitter.editor = editor
+        splitter.preview = preview
+
+        editor.textChanged.connect(lambda: self.update_markdown_preview(splitter))
+
         return index
 
     def close_tab(self, index):
@@ -192,9 +208,10 @@ class BitPad(QMainWindow):
         data = []
 
         for i in range(self.tabs.count()):
-            editor = self.tabs.widget(i)
+            tab_widget = self.tabs.widget(i)
+            editor = getattr(tab_widget, 'editor', None)
+            content = editor.toPlainText() if editor else ""
             title = self.tabs.tabText(i)
-            content = editor.toPlainText()
             path = self.tab_file_paths.get(i)
             data.append({"title": title, "content": content, "path": path})
         
@@ -272,8 +289,9 @@ class BitPad(QMainWindow):
 
     def save_to_file(self, tab_index, file_path):
         try:
-            editor = self.tabs.widget(tab_index)
-            content = editor.toPlainText()
+            tab_widget = self.tabs.widget(tab_index)
+            editor = getattr(tab_widget, 'editor', None)
+            content = editor.toPlainText() if editor else ""
 
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
@@ -460,6 +478,22 @@ class BitPad(QMainWindow):
         
         # Fallback: use stored content
         index = self.add_new_tab(bookmark["title"], bookmark["content"])
+
+    def toggle_markdown_preview(self):
+        current_widget = self.tabs.currentWidget()
+        if not hasattr(current_widget, 'preview'):
+            return
+        
+        preview = current_widget.preview
+        preview.setVisible(not preview.isVisible())
+        self.update_markdown_preview(current_widget)
+    
+    def update_markdown_preview(self, splitter):
+        if not splitter.preview.isVisible():
+            return
+        text = splitter.editor.toPlainText()
+        html = markdown(text)
+        splitter.preview.setHtml(html)
 
 if __name__ == '__main__':
     app = QApplication([])
